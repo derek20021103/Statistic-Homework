@@ -1,0 +1,139 @@
+---
+title: "Penguins analysis"
+date: today
+author: 柯堯珹
+format:
+ pdf:
+    include-in-header:
+      - text: |
+         \usepackage{setspace,relsize}
+mainfont: "Microsoft JhengHei UI"
+toc: true
+---
+
+
+# Summary Statistic  
+
+```{r}
+#| output: asis
+library(Hmisc)
+library(palmerpenguins)
+latex(describe(penguins_raw), file = "", caption.placement = "top")
+```
+
+
+# Table 1  
+
+```{r}
+#| warning: false
+library(table1)
+str(penguins_raw)
+```
+
+# Missing Values
+
+```{r}
+#| output: asis
+library(Hmisc)
+library(DataExplorer)
+plot_missing(penguins_raw)
+```
+
+# Correlation
+
+#The comments is not the main character that I want to analyze. Thus, to address the problems of missing values, I do not consider the comments' missing value but remove the other missing values in other variables. Moreover,it is particularly noticeable that Body_mass and Flipper_length has a highly positive correlation.
+```{r}
+library(ggplot2)
+library(dplyr)
+penguins_clean <- penguins_raw %>%
+  filter(complete.cases(select(., -Comments)))%>%
+  rename(Culmen_Length_mm=`Culmen Length (mm)`)%>%
+  rename(Culmen_Depth_mm=`Culmen Depth (mm)`)%>%
+  rename(Flipper_Length_mm=`Flipper Length (mm)`)%>%
+  rename(Body_Mass_g=`Body Mass (g)`)%>%
+  rename(Delta_15_N=`Delta 15 N (o/oo)`)%>%
+  rename(Delta_13_C=`Delta 13 C (o/oo)`)
+library(ggcorrplot)
+corr<-cor(penguins_clean[c('Culmen_Length_mm','Culmen_Depth_mm','Flipper_Length_mm','Body_Mass_g','Delta_15_N','Delta_13_C')])
+ggcorrplot(corr,
+           lab = TRUE)+
+  scale_fill_gradient(low='white',high = 'lightblue')+
+  ggtitle('Correlation of each pair')+
+  theme(plot.title = element_text(hjust=0.5))#plot correlation
+```
+# Different species with each mean and sd
+#This stage calculates the mean and standard deviation in continuous variables.
+```{r}
+penguin_stats <- penguins_clean %>%
+  group_by(Species) %>%
+  summarise(
+    Culmen_Length_mean = mean(Culmen_Length_mm, na.rm = TRUE), 
+    Culmen_Length_sd = sd(Culmen_Length_mm, na.rm = TRUE),     
+    Culmen_Depth_mean = mean(Culmen_Depth_mm, na.rm = TRUE),    
+    Culmen_Depth_sd = sd(Culmen_Depth_mm, na.rm = TRUE),
+    Flipper_Length_mean = mean(Flipper_Length_mm, na.rm = TRUE),
+    Flipper_Length_sd = sd(Flipper_Length_mm, na.rm = TRUE),
+    Body_Mass_g_mean = mean(Body_Mass_g, na.rm = TRUE),
+    Body_Mass_g_sd = sd(Body_Mass_g, na.rm = TRUE)
+  )
+print(penguin_stats)
+```
+
+# QQplot
+
+```{r}
+ggplot(penguins_clean, aes(sample= Culmen_Length_mm)) +  # Create QQplot with ggplot2 package
+  stat_qq() +
+  stat_qq_line(col = "red")+
+  labs(title = "QQplot for Culmen_Length_mm") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(penguins_clean, aes(sample = Culmen_Depth_mm)) +  # Create QQplot with ggplot2 package
+  stat_qq() +
+  stat_qq_line(col = "red")+
+  labs(title = "QQplot for Culmen_Depth_mm") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(penguins_clean, aes(sample = Flipper_Length_mm)) +  # Create QQplot with ggplot2 package
+  stat_qq() +
+  stat_qq_line(col = "red")+
+  labs(title = "QQplot for Flipper_Length_mm") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(penguins_clean, aes(sample = Body_Mass_g)) +  # Create QQplot with ggplot2 package
+  stat_qq() +
+  stat_qq_line(col = "red")+
+  labs(title = "QQplot for Body_Mass_g") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+# Types of penguins in different islands
+#Regarding the island, there is only one species of Adelie Penguins in Torgeson. However, Adelie Penguins are also observed in other two islands, but with 118 Gentoo Penguins in Biscoe and 67 Chinstrap Penguins in Dream. As regards gender, the figures for female and male have a similar distribution of different island.
+```{r}
+library(ggplot2)
+#count types of penguins
+penguin_counts_island <- penguins_clean %>%
+  count(Island, Species)
+#draw an overall plot
+ggplot(penguin_counts_island, aes(x = Island,y=n, fill = Species)) +
+  geom_bar(stat = "identity",position = "dodge") +
+  geom_text(aes(label = n), position = position_dodge(width = 0.9), vjust = -0.5,size=2)+
+  labs(title = "Different types of penguins in each island", 
+       x = "Island", 
+       y = "Numbers") +
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
+
+#count types of penguins
+penguin_counts_Stage <- penguins_clean %>%
+  count(Sex, Species)
+#draw an overall plot
+ggplot(penguin_counts_Stage, aes(x = Sex,y=n, fill = Species)) +
+  geom_bar(stat = "identity",position = "dodge") +
+  geom_text(aes(label = n), position = position_dodge(width = 0.9), vjust = -0.5,size=2)+
+  labs(title = "Gender of different types of penguins", 
+       x = "Gender", 
+       y = "Numbers") +
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
